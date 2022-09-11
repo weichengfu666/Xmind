@@ -1,0 +1,353 @@
+1，创建和操作数据库： 
+show databases;															显示所有数据库
+create database 【if not exists】db1【character set utf8】;								创建数据库db1(可以指定字符集编码）
+show create database db1;													查看数据库db1的字符集信息
+show character set;														显示所有字符集信息
+alter database db1 character set utf8 collate utf8_general_ci;								修改数据库的字符集编码
+drop database 【if exists】db1;													删除数据库
+use db1;																选择数据库
+2，创建和操作表：
+【数据库中存储数据的基本单位就是表，一个数据库是由多个表组成】
+【表是二维结构，由行和列构成】
+【表的行是横排数据，也被称之为记录（record）】
+【表的列是竖排数据，也被称之为字段（field）】
+【表与表之间存在着 关联关系】
+【表中的数据是按类型进行存储的，类型的定义只需要在建表时对字段进行规定即可】
+【常用类型：
+		bit/tinyint/smallint/int/bigint	 	 ：整型
+		double/float/decimal	      		：浮点型
+		char/varchar/text	     		  	：字符串类型
+		blob				     	 	  ：字节类型
+		date				    		  ：日期类型（yyyy-MM-dd hh:mm:ss）
+		time				      		  ：时间类型（hh:mm:ss）
+		Timestamp		     		  	：时间戳类型（yyyy-MM-dd hh:mm:ss）
+		Datetime                 	     		  ：时间类型（yyyy-MM-dd hh:mm:ss）
+		Enum				    	  	：枚举类型】
+show tables;																显示所有表
+create table customers(
+    -> cust_id int auto_increment primary key,
+    -> cust_name varchar(50) not null,
+    -> cust_sex char(1) not null default 'm',
+    -> cust_address varchar(50),
+    -> cust_concat varchar(50)
+    -> )engine innodb;									（create table）			创建表
+desc customers;									 	（desc）				查看表描述
+show create table customers;								（show create table）		查看创建表的信息	
+【操作表的字段：
+	alter table customers add cust_height double;				（add）				添加字段
+	alter table customers change cust_name cust_names varchar(60);	（change）	 			必须修改字段名，字段类型可以不修改，但都必须指定字段名和字段类型
+	alter table customers modify cust_name varchar(30);			（modify） 				只能修改字段类型
+	alter table customers drop cust_height;					（drop）				删除字段
+	alter table customers alter column cust_name set default 'laowei';  	（set default）			修改字段默认值
+	alter table customers rename to customer;					（rename to）			修改表的名字
+	】	
+【复制表：
+	create table if not exists like_table like customers;				（like）			只复制表结构，不复制表内容
+	create table if not exists as_table as select * from suctomers;		（as）			只复制表内容，但是索引和完整性约束不会被复制
+	】
+【删除表：
+	drop table if exists as_table;							（drop table）			删除表
+	】	
+3，表数据的基本操作：
+【表中插入记录：
+	insert into customers values(null,'laowei',default,'chengdu',null);	（insert into）		不指定字段形式，必须按照建表顺序赋值
+	insert into customers 
+		->(cust_id,cust_name,cust_sex,cust_address,cust_concat)					
+		->values
+		->(null,'lisi',default,'wuhan',null);										指定字段形式，按指定赋值
+	insert into customers values
+    		-> (null,'lisi',default,'wuhan',null),
+   		-> (null,'zhangsan',default,'nanjing',null);								同时插入多条记录
+   	insert into copy_customers select * from customers;							插入查询的记录
+	replace into customers values(2,'laowei',default,'ziyang',NULL);		（replace into）		替换主键为2的记录
+】
+【表中删除记录：
+	delete from copy_customers where cust_id < 6;				（delete from）		删除满足条件的记录（delete是逐行删除可以恢复）（会把删除操作记录到日志，可以回滚）
+	delete from copy_customers;											删除表中所有记录（对于有索引和视图的表，应该使用delete）								
+	truncate copy_customers;							（truncate）			删除表中所有记录（truncate是直接删除不能恢复）（会把之前的表删除，并创建和之前一样的空表，速度快）
+】	
+【表中修改记录：
+	update copy_customers set cust_address='wuhan';				（update）	更新该字段的所有记录
+	update copy_customers set cust_address='chengdu' where cust_name='laowei';		更新满足条件的该字段的记录
+】
+【表中查询记录：
+	【select语句中各子句的说明：
+		select：	要返回的列或表达式
+		from：	从中检索数据的表
+		where：	行级过滤
+		group by：	分组说明
+		having：	组级过滤
+		order by：	输出排序顺序
+		limit：	要检索的行数
+		【
+			case
+				when ... then ...
+				when ... then ...
+				else ...
+			end
+		】:		对检索的记录条件输出	
+	】
+	【select也可用于一般数学计算：
+		select 1+1 as sum;
+		select (2+1)*3/4;
+	】
+	select cust_id,cust_name as '名字', cust_sex as '性别',cust_address as '地址' from customers;	给查询的字段取别名（在内存中）
+	select cust_name as '姓名',
+  		-> case
+  		-> when cust_sex='m' then '男'
+    		-> when cust_sex='f' then '女'
+    		-> else '不男不女'
+  		-> end as '性别'
+  		-> from customers;												对检索的记录加条件
+	select cust_id+100 as cust_id
+    		-> from customers;												对检索的记录做运算
+	【聚合函数：
+		select count(cust_id) from customers;							count:	统计数量，返回int类型整数（count(字段)不会统计null）（count(*)统计表的记录条数）
+		select max(cust_id) from customers;							max：	求最大值
+		select min(cust_id) from customers;							min：	求最小值
+		select sum(cust_id) from customers;							sum：	返回表达式中所有值的和
+		select avg(cust_id) from customers;							avg：	求平均值（不会统计null,可用 select avg(ifnull(字段,0)) from table将null算进来）
+	】
+	【where子句：
+		1）关系表达式：
+			>,>=,<,<=,=,!=,<>
+		2）多条件链接符：
+			and, or, [not] between...and...
+		3）集合操作：
+			[not] in (set), >all(set), <all(set), >any(set), <any(set)
+		4）模糊查询：like
+			_ ：占位符，表示匹配任意一个字符
+			%：表示匹配任意N个字符，大于等于0		
+		select * from customers where cust_name='laowei' or cust_name='lisi'; 《 or 和 in，and 和 not in》 select * from customers where cust_name in ('laowei','lisi');
+		select * from customers where cust_age<=26 and cust_age>=23;《between...and...》select * from customers where cust_age between 23 and 26;
+		select * from customers where cust_concat is null; 《查找字段为空或不为空用is null 或 is not null》select * from customers where cust_concat is not null;
+		select * from customers where cust_name like '____';《查询姓名由四个字符构成用like》select * from customers where cust_name like 'l_s_';				
+		select * from customers where cust_name like 'l%'; 《查询姓名由‘l’开头的》
+		select * from customers where cust_name like '%a%'; 《查询姓名包含‘a’的》
+	】	
+	【group by 子句：
+		1）引言：有的时候，需要对数据进行分组统计最大值，最小值，平均值，和，总数之类的这样信息，需要和聚合函数配合使用。
+			（所有的聚合函数，都会忽略字段为null的那条记录。count（*）不会忽略null只所在的行记录，通常用于统计总行数）
+			（在分组查询时，只有分组字段可以写在select子句中，其他不是分组的字段，不应该写在select子句中，无意义）
+			（ifnull（colName，value）：如果colName对应的值不为空，就使用本身的值，如果为null，使用value，如：select avg(ifnull(sal,0),avg(ifnull(comm,0)) from emp;）
+		2）语法：group by colName
+		select count(*),cust_sex from customers where cust_sex is not null group by cust_sex;《统计不同性别的人数用group by》
+	】	
+	【order by 子句：
+		1）引言：对于查询出来的数据按照规则进行排序的，order by子句通常放置在一个查询语句的最后部分
+		2）语法：order by colName [asc | desc] [,cloName [asc | desc]]
+			asc：升序，默认情况就是升序
+			desc：降序
+		select * from tb_employee order  by salary desc;							查询员工表中的所有员工信息，按照工资降序排序
+		select * from tb_employee order  by salary desc, age asc;					查询员工表中的所有员工信息，按照工资降序排序，如果相同，在按照奖金升序排序
+	】
+	【limit 子句：
+		1）引言：当一页的数据量过大时，我们可以进行分页显示操作。注意分页查询时，一般都要进行先排序，在分页。
+		2）语法：limit [start,]total
+			start：表示从第几条记录开始查询，默认从0开始
+			total：表示要查询的记录数目
+		3）注意：mysql的记录index从0开始。一个参数的含义：limit total 表从0开始查询total条记录
+			查询第page页的数据，每页大小为pageSize。limit的写法如下：limit（page-1）*pageSize，pageSize
+		select * from tb_employee order by salary desc limit 3;						查询员工表中工资最高的前三位
+		select * from tb_employee order by salary desc limit 3,3;					查询员工表中工资最高的第二页（每页取三条记录）
+	】	
+	【多表查询：
+		1）引言：有的时候，我们的业务需求的数据不只是在一张表中，而是在两张或两张以上的表中，而这些表中通常都会存在着“有关系”的字段。
+			那么此时的查询操作涉及到多表查询，我们称之为关联查询
+		2）语法：select * from emp,dept [where关联条件]；（通常有两种写法）
+			或者select * from emp join dept [on关联条件];
+		3）写法分类：
+			第一种是在from子句中，直接写多个表名，表名之间使用逗号分隔开，如：
+				select A.*, B.*, C.* from A,B,C where AB关联条件 and AC或BC关联 条件
+			第二种是在from子句中，多个表名之间使用join关键字连接，并在on关键字后面添加关联条件
+				select A.*, B.* from A join B on AB关联条件
+				select A.*, B.*, C.* from A join B join C on AB关联条件 and AC或BC关联 条件
+				select A.*, B.*, C.* from A join B on AB关联条件 join C on AC或BC关联条件
+		select * from tb_employee,tb_dept where tb_employee.deptno=tb_dept.deptno;
+		select * from tb_employee join tb_dept on tb_employee.deptno=tb_dept.deptno；	
+	】
+	【join连接：
+		1）内连接：[inner] join	（只显示满足条件的记录）
+		2）外连接：（outer join）：（引出一个驱动表的概念：驱动表里的数据全部显示，即除了显示满足条件的记录，还显示驱动表中不满足条件的记录）
+			左外连接：left [outer] join ，左表是驱动表
+			右外连接：right [outer] join ，右表是驱动表、
+			全外连接：full [outer] join ，mysql不支持，两张表里的数据全部显示出来
+		select tb_dept.dname,tb_employee.ename from tb_dept inner join tb_employee on tb_dept.deptno=tb_employee;	只显示左右都有deptno的记录
+		select tb_dept.dname,tb_employee.ename from tb_dept left join tb_employee on tb_dept.deptno=tb_employee;		左边表有deptno的记录全都显示出来，如果右边表没有对应的deptno记录则显示null
+		select tb_dept.dname,tb_employee.ename from tb_dept right join tb_employee on tb_dept.deptno=tb_employee；	右边表有deptno的记录全都显示出来，如果左边表没有对应的deptno记录则显示null
+	】
+	【集合查询：
+		1）引言：union（去重）/  union all（不去重）
+		2）语法：两个查询语句使用上述的关键字连接即可。（注意：两个查询语句的字段个数，字段名，顺序都必须对应上。这是因为：合并的时候会将第一次查询的结果全部保留，包括字段信息，以第一次的字段为准，然后一条一条的追加后面查询的结果，如果去重，则已经存在的记录将被忽略）
+		select * from tb_employee where deptno in ('D1','D2') union all select * from tb_employee where deptno in ('D2','D3');
+	】
+】
+4，索引：
+【索引的创建：
+	create table seller(
+    -> seller_id int not null auto_increment,
+    -> seller_name char(50) not null,
+    -> seller_address char(50),
+    -> seller_contact char(50),
+    -> product_type char(50),
+    -> sales int,
+    -> primary key(seller_id,product_type),
+    -> index index_seller(sales)
+    -> );
+】
+【索引的添加：
+	alter table seller
+    -> add index  index_seller_name(seller_name);		
+】
+【索引的删除：
+	alter table seller
+    -> drop index index_seller_name;
+】
+【索引的查看：
+	show index from seller;
+】
+5，视图：
+	1）视图概念：是从一个或多个表或者视图中导出的表，它也包含一系列带有名称的数据列和若干条数据行
+	2）视图与数据表的区别：视图只包括定义视图时的查询语句，不包括查询到的数据
+		（a）视图不是数据库中真实的表，是一张虚拟表，其结构和数据是建立在数据库中真实表的查询基础上的
+		（b）视图的内容是由存储在数据库中进行查询操作的SQL语句来定义的，它的列数据与行数据均来自于定义视图的查询所引用的真实表（也称基础表，基表或源表）并且这些数据是在引用视图时动态生成的
+		（c）视图不是以数据集的形式存储在数据库中，它 所对应的数据实际上是存储在视图所引用的真实表（基础表）中
+		（d）视图时用来查看存储在别处的数据的一种方式而其自身并不存储数据。尽管视图与数据库中的表存在着本质的区别，但视图一经定义后，可以如同使用表一样，对视图进行查询，修改，删除和更新操作
+	3）视图的优点：
+		（a）集中分散数据：当所需要数据分散在多个表中时，通过定义视图可以将这些数据集中到一起，方便用户查询与处理
+		（b）简化查询语句：视图可以屏蔽数据库的复杂性，用户不必详细了解数据库中复杂的表结构和表连接，因此能简化用户对数据库的查询语句
+		（c）重用SQL语句：视图提供的是一种对查询操作的封装，它本身不包含数据，其所呈现的是更新后的数据。通过定义视图，编写完所需查询后，可以方便的重用该视图
+		（d）保护数据安全：通过只授予用户使用视图的 权限，而不具体指定使用表的权限，来保护基础表的安全性
+		（e）共享所需数据：每个用户不必都定义和存储自己所需的数据，可以通过视图共享数据库中的数据，从而同样的数据只需要存储一次
+		（f）更改数据格式：使用视图，可以重新格式化检索出来的数据，并组织输出到其他应用程序中去
+【创建视图：
+	create or replace view customers_view
+    -> as
+    -> select * from customers where cust_sex='m'
+    -> with check option;							在数据库创建包含customers表中所有男客户的信息的视图，并且要求保证今后对该视图数据的修改必须符合客户性别为男性这个条件
+】
+【删除视图：
+	1）语法：
+		DROP VIEW [IF EXISTS]			：删除视图
+		view_name[,view_name1...]			：视图名称
+		[CASCADE | RESTRICT]			：CASCADE：级联删除，如果删除的该视图上还导出了其它视图也一并删除。RESTRICT：约束删除，如果该视图上还导出了其它视图，那么该视图是不能被删除的
+	drop view customers_view;
+】
+【修改视图：
+	1）语法：
+		
+】
+6，完整性约束：（primary key主键）| （unique候选键）都是唯一性约束，不同点是主键不能为null，而候选键可以
+	 create table customers(
+    -> cust_id int auto increment primary key,
+    -> cust_name varchar(50) not null,
+    -> cust_sex bit not null default 0,
+    -> cust_address varchar(50),
+    -> cust_concat varchar(50),
+    -> unique(cust_address)
+    -> );												创建候选键：（主键和候选键的区别：一个表只能有一个主键，但是可以有多个候选键，主键不能为空，候选键可以为空，但都是唯一的）
+	alter table customers add unique(cust_address); 				添加候选键
+【参照完整性：（foreign key外键）外键所引用的字段必须是主键,且外键的值要包含与引用的字段的值中才能操作，如插入成绩表的学生id要在学生表中的id中有，才能成功。restrict表示不同步更新，cascade表示同步级联更新。
+	create table stu_score(
+    -> s_id int primary key not null,
+    -> s_score double,
+    -> foreign key(s_id) reference stu(id)
+    -> on delete restrict
+    -> on update restrict
+    -> );												创建外键：s_id是表stu_score的外键，需要参照和引用表stu的id字段，且id字段必须是主键，如果插入的s_id在id中没有，则会插入失败
+	alter table stu score add foreign key(s_id) references stu(id);		添加外键：
+】
+【用户定义完整性（域完整性）：有非空约束，CHECK约束，触发器
+	create table stu(
+    -> sid char(50) primary key,
+    -> sname varchar(50) not null,
+    -> age int check(age >=18 and age <=25),
+    -> gender varchar(50))								mysql不支持CHECK约束，语法通过，但是没有效果
+】
+【命名完整性约束：在完整性约束定义说明之前加上关键字CONSTRAINT和改约束的名字（自己给约束起名字）
+	create table orders(
+    -> order_id int not null auto_increment,
+    -> order_product char(50) not null,
+    -> order_product_type char(50) not null,
+    -> cust_id int not null,
+    -> order_date datetime not null,
+    -> order_price double not null,
+    -> constraint pk_orderid primary key(order_id),
+    -> constraint fk_custid foreign key(cust_id) references customers(cust_id)
+    -> on delete restrict
+    -> on delete restrict
+    -> );
+】 
+7，触发器：1）引言：触发器是一个被指定关联到一个表的数据库对象，当对一个表的特定事件出现时，它将会被激活。触发器具有mysql语句在需要时才被执行的特点，即某些msql语句在特定事件发生时自动执行。
+				触发器用于保护表中的数据。当有操作影响到触发器所保护的数据时，触发器就会自动执行，从而保障数据库中数据的完整性，以及多个表之间数据的一致性。
+				触发器就是mysql响应insert，update和delete语句而自动执行的一条mysql语句（或位于begin和end语句之间的一组mysql语句）。其他mysql语句是不支持触发器的。
+		  2）语法：【创建触发器：
+					create [definer={user|current_user}] trigger trigger_name trigger_time  trigger_event
+			  	   -> on tb_name 
+			   	   -> for each row
+			   	   -> trigger_body
+					definer:		指定触发器被触发时满足事件执行权限的安全上下文
+					trigger_time:	触发器被触发的时刻，有两个选项，before和after，分别表示触发器在激活它的语句之前或者之后触发。如果验证新数据是否满足使用的限制，则使用before，如果希望在激活触发器的语句执行之后完成几个或更多的改变，通常使用after
+					trigger_event:	触发事件，用于指定激活触发器的语句的种类，可以是下述之一：insert：将新行插入表时激活触发器，update：更新表中某一行时激活触发器，delete：从表中删除某一行
+					tb_name：	和触发器关联的表名，必须引用永久性表，不能将触发器于临时表或视图关联起来。这样在该表上触发事件才会激活触发器。同一个表不能拥有两个具有相同触发时刻和事件的触发器
+					for each row:	用来指定对于受触发事件影响的每一行都要激活触发器的动作，例如，使用一条insert语句向一个表中插入多行数据时，触发器会对每一行数据的插入都执行相应的触发器动作
+					trigger_body:	触发器动作主体，包含触发器激活时将要执行的mysql语句，如果要执行多个语句，可以使用begin...end复合语句结构。这里可以使用存储过程中允许的相同语句
+				】
+				【查看触发器：
+					show triggers [from | in db_name]
+				】
+				【删除触发器：
+					drop trigger [if exist] [db_name.]trigger_name
+					注意：drop trigger语句需要super权限，删除一个表的同时，也会自动删除该表上的触发器。另外触发器不能更新或覆盖，为了修改一个触发器，必须先删除它，然后再重新创建	
+				】
+create trigger tb_commodity_delete_trigger after delete
+    -> on tb_commodity
+    -> for each row
+    -> set @str='delete one record from tb_commodity';				创建删除触发器：用于每次向表中删除遗憾数据时将用户变量str的值设置为：'delete one record from tb_commodity'
+show triggers;												查看触发器
+drop trigger tb_commodity_delete_trigger;						删除触发器
+
+
+
+
+
+
+
+
+8，用户账号管理：MySql的用户账号及相关信息存储在mysql数据库的user表中，对应用户名的字段是User。root用户是由系统创建的，并且被赋予了操作和管理MySql的所有权限。
+【创建用户账号：
+	create user 'laowei'@localhost identified by '123abc';			用户名：'laowei'，主机名：'localhost'，密码：'123abc'
+】
+【查询用户账号：
+	select Host,User from mysql.user;	
+】
+【删除用户账号：
+	drop user 'laowei'@localhost;
+】
+【修改用户名：
+	rename user 'laowei'@localhost to 'xiaoming'@localhost;		修改用户'laowei'为'xiaoming'
+】
+【修改登录密码：
+	select password('123abc');								对密码加密返回散列值
+	set password='*3620754A963ECB3D7296097F9DA00C1FA5476B03';	对当前用户设置密码
+	set password for xiaoming@localhost='*3620754A963ECB3D7296097F9DA00C1FA5476B03';	对指定用户设置密码
+】
+【权限授予：grant
+	grant select(cno,cname) on tb_commodity to laowei@lcoalhost with grant option;	授予搜索权限
+】
+【权限撤销：revoke】
+9，数据备份与恢复：
+【使用sql语句备份与恢复表数据：	
+】
+10，二进制日志文件的使用：
+	show variables like 'log_bin';
+
+
+
+
+
+
+
+
+
+
